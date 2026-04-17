@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Eye Calibration — ProctorEye</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a1a;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: none;
+  }
+
+  /* ── Instruction overlay ───────────────────────────────────── */
+  #intro-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,10,26,0.97);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    gap: 20px;
+  }
+  #intro-overlay h1 { font-size: 2.2rem; color: #a78bfa; }
+  #intro-overlay p  { font-size: 1.1rem; color: #ccc; max-width: 500px; text-align: center; line-height: 1.7; }
+  #intro-overlay ul { color: #ccc; line-height: 2; list-style: none; }
+  #intro-overlay ul li::before { content: "✦ "; color: #a78bfa; }
+  #start-btn {
+    margin-top: 10px;
+    padding: 14px 40px;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    border: none; border-radius: 30px;
+    color: #fff; font-size: 1.1rem;
+    cursor: pointer; transition: transform 0.2s;
+  }
+  #start-btn:hover { transform: scale(1.05); }
+
+  /* ── Calibration dot ───────────────────────────────────────── */
+  .calib-dot {
+    position: fixed;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #f472b6, #7c3aed);
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 0 20px #a78bfa, 0 0 40px #7c3aed55;
+    cursor: none;
+    z-index: 50;
+  }
+  .calib-dot.active  { transform: translate(-50%, -50%) scale(1); }
+  .calib-dot.success { background: radial-gradient(circle, #34d399, #059669); }
+  .calib-dot.pulse   { animation: pulse 0.6s ease; }
+
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0   0   #34d39988; }
+    100% { box-shadow: 0 0 0   30px #34d39900; }
+  }
+
+  /* ── Progress bar ──────────────────────────────────────────── */
+  #progress-wrap {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    width: 320px; z-index: 60;
+    display: none;
+  }
+  #progress-label {
+    text-align: center; margin-bottom: 6px;
+    font-size: 0.9rem; color: #a78bfa;
+  }
+  #progress-bar-bg {
+    background: #1e1b4b; border-radius: 10px; height: 8px;
+  }
+  #progress-bar {
+    height: 8px; border-radius: 10px; width: 0%;
+    background: linear-gradient(90deg, #7c3aed, #f472b6);
+    transition: width 0.3s;
+  }
+
+  /* ── Status text ───────────────────────────────────────────── */
+  #status-text {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    font-size: 1.1rem; color: #e2e8f0;
+    background: rgba(30,27,75,0.8);
+    padding: 10px 28px; border-radius: 20px;
+    backdrop-filter: blur(10px);
+    z-index: 60; display: none;
+    text-align: center;
+  }
+
+  /* ── Webcam preview ────────────────────────────────────────── */
+  #webcam-wrap {
+    position: fixed; bottom: 90px; right: 20px;
+    width: 180px; height: 135px;
+    border: 2px solid #7c3aed;
+    border-radius: 12px; overflow: hidden;
+    display: none; z-index: 60;
+  }
+  #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+  /* ── Canvas (hidden, used for frame capture) ───────────────── */
+  #capture-canvas { display: none; }
+
+  /* ── Done overlay ──────────────────────────────────────────── */
+  #done-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,10,26,0.97);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100; gap: 16px;
+  }
+  #done-overlay h2 { font-size: 2rem; color: #34d399; }
+  #done-overlay p  { color: #ccc; font-size: 1.05rem; }
+  #done-overlay .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid #7c3aed44;
+    border-top-color: #a78bfa;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ── Intro overlay ─────────────────────────────────────────── -->
+<div id="intro-overlay">
+  <h1>👁️ Eye Calibration</h1>
+  <p>We need to calibrate your gaze to your screen.<br>
+     This makes the heatmap <strong>precisely accurate</strong>.</p>
+  <ul>
+    <li>9 dots will appear one at a time</li>
+    <li>Look directly at each dot</li>
+    <li>Hold your gaze for 2 seconds</li>
+    <li>Don't move your head — only your eyes</li>
+    <li>Keep your face clearly visible to the webcam</li>
+  </ul>
+  <button id="start-btn" onclick="startCalibration()">Start Calibration →</button>
+</div>
+
+<!-- ── Progress bar ─────────────────────────────────────────── -->
+<div id="progress-wrap">
+  <div id="progress-label">Dot 0 / 9</div>
+  <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+</div>
+
+<!-- ── Status text ──────────────────────────────────────────── -->
+<div id="status-text">Initializing webcam...</div>
+
+<!-- ── Webcam ────────────────────────────────────────────────── -->
+<div id="webcam-wrap">
+  <video id="webcam" autoplay playsinline muted></video>
+</div>
+<canvas id="capture-canvas" width="640" height="480"></canvas>
+
+<!-- ── Calibration dot ──────────────────────────────────────── -->
+<div class="calib-dot" id="calib-dot"></div>
+
+<!-- ── Done overlay ─────────────────────────────────────────── -->
+<div id="done-overlay" id="done-overlay">
+  <div class="spinner"></div>
+  <h2>✅ Calibration Complete!</h2>
+  <p>Building your personal gaze model...</p>
+  <p id="done-status" style="color:#a78bfa;"></p>
+</div>
+
+<script>
+// ── 9-dot grid positions (% of screen) ───────────────────────
+// 3x3 grid: corners + edges + center
+const DOT_POSITIONS = [
+  { x: 0.05, y: 0.05 },   // 0: top-left
+  { x: 0.50, y: 0.05 },   // 1: top-center
+  { x: 0.95, y: 0.05 },   // 2: top-right
+  { x: 0.05, y: 0.50 },   // 3: mid-left
+  { x: 0.50, y: 0.50 },   // 4: center
+  { x: 0.95, y: 0.50 },   // 5: mid-right
+  { x: 0.05, y: 0.95 },   // 6: bottom-left
+  { x: 0.50, y: 0.95 },   // 7: bottom-center
+  { x: 0.95, y: 0.95 },   // 8: bottom-right
+];
+
+// Shuffle for randomness (reduces bias)
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+let dotOrder      = shuffle([...Array(9).keys()]);
+let currentDotIdx = 0;
+let webcamStream  = null;
+let collecting    = false;
+let calibData     = [];   // [{iris_x, iris_y, screen_x, screen_y}, ...]
+const FRAMES_PER_DOT = 15; // capture 15 frames per dot (2 seconds)
+let frameCount    = 0;
+let frameBuffer   = [];   // iris readings for current dot
+
+const dot        = document.getElementById('calib-dot');
+const statusText = document.getElementById('status-text');
+const progLabel  = document.getElementById('progress-label');
+const progBar    = document.getElementById('progress-bar');
+
+// ── Start calibration ────────────────────────────────────────
+async function startCalibration() {
+  document.getElementById('intro-overlay').style.display = 'none';
+  document.getElementById('progress-wrap').style.display  = 'block';
+  document.getElementById('status-text').style.display    = 'block';
+  document.getElementById('webcam-wrap').style.display    = 'block';
+
+  statusText.textContent = '📷 Starting webcam...';
+
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' }
+    });
+    document.getElementById('webcam').srcObject = webcamStream;
+    statusText.textContent = '✅ Webcam ready! Starting dots...';
+    await sleep(1000);
+    showNextDot();
+  } catch(e) {
+    statusText.textContent = '❌ Webcam error: ' + e.message;
+  }
+}
+
+// ── Show next dot ─────────────────────────────────────────────
+function showNextDot() {
+  if (currentDotIdx >= 9) {
+    finishCalibration();
+    return;
+  }
+
+  const dotIdx = dotOrder[currentDotIdx];
+  const pos    = DOT_POSITIONS[dotIdx];
+  const sx     = Math.round(pos.x * window.innerWidth);
+  const sy     = Math.round(pos.y * window.innerHeight);
+
+  // Position dot
+  dot.style.left = sx + 'px';
+  dot.style.top  = sy + 'py';
+  dot.style.left = sx + 'px';
+  dot.style.top  = sy + 'px';
+  dot.className  = 'calib-dot';
+
+  // Update progress
+  progLabel.textContent = `Dot ${currentDotIdx + 1} / 9`;
+  progBar.style.width   = ((currentDotIdx / 9) * 100) + '%';
+  statusText.textContent = `👁️ Look at the dot and hold still...`;
+
+  // Show dot with animation
+  requestAnimationFrame(() => {
+    dot.classList.add('active');
+  });
+
+  // Wait 500ms then start collecting frames
+  setTimeout(() => {
+    frameBuffer = [];
+    frameCount  = 0;
+    collecting  = true;
+    collectFrames(sx, sy);
+  }, 600);
+}
+
+// ── Collect frames for current dot ───────────────────────────
+async function collectFrames(screenX, screenY) {
+  while (frameCount < FRAMES_PER_DOT) {
+    const irisPos = await captureIrisPosition();
+
+    if (!irisPos) {
+      // Face not seen — PAUSE and wait
+      statusText.textContent = "⚠️ Face not detected! Please center your face.";
+      statusText.style.color = "#f87171";
+      dot.style.background   = "radial-gradient(circle, #f87171, #dc2626)";
+      await sleep(500);
+      continue;  // retry same frame, don't increment counter
+    }
+
+    // Face seen — resume normally
+    statusText.style.color   = "#e2e8f0";
+    statusText.textContent   = `👁️ Look at the dot and hold still...`;
+
+    const pct = frameCount / FRAMES_PER_DOT;
+    if (pct > 0.5) {
+      dot.style.background = `radial-gradient(circle, #34d399, #059669)`;
+    } else {
+      dot.style.background = `radial-gradient(circle, #f472b6, #7c3aed)`;
+    }
+
+    frameBuffer.push({
+      iris_x:   irisPos.iris_x,
+      iris_y:   irisPos.iris_y,
+      screen_x: screenX,
+      screen_y: screenY
+    });
+
+    frameCount++;
+    await sleep(130);
+  }
+
+  collecting = false;
+
+  if (frameBuffer.length >= 3) {
+    const medX = median(frameBuffer.map(f => f.iris_x));
+    const medY = median(frameBuffer.map(f => f.iris_y));
+    calibData.push({
+      iris_x:   medX,
+      iris_y:   medY,
+      screen_x: screenX,
+      screen_y: screenY,
+      dot_idx:  dotOrder[currentDotIdx]
+    });
+  }
+
+  dot.classList.add('pulse');
+  dot.style.background = 'radial-gradient(circle, #34d399, #059669)';
+  statusText.textContent = '✅ Got it!';
+  statusText.style.color = '#34d399';
+
+  await sleep(400);
+  dot.classList.remove('active');
+  await sleep(300);
+
+  currentDotIdx++;
+  showNextDot();
+}
+
+// ── Capture iris position via Flask ──────────────────────────
+async function captureIrisPosition() {
+  try {
+    const video  = document.getElementById('webcam');
+    const canvas = document.getElementById('capture-canvas');
+    const ctx    = canvas.getContext('2d');
+
+    // Draw mirrored frame (mirror back for correct orientation)
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    const frameData = canvas.toDataURL('image/jpeg', 0.7);
+
+    const resp = await fetch('/get_iris_position', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ frame: frameData })
+    });
+
+    if (!resp.ok) return null;
+    const data = await resp.json();
+
+    if (data.detected) {
+      return { iris_x: data.iris_x, iris_y: data.iris_y };
+    }
+    return null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── Finish calibration ────────────────────────────────────────
+async function finishCalibration() {
+  dot.className = 'calib-dot'; // hide dot
+
+  // Show done overlay
+  const doneOverlay = document.getElementById('done-overlay');
+  doneOverlay.style.display = 'flex';
+  document.getElementById('done-status').textContent =
+    `Collected ${calibData.length} calibration points`;
+
+  // Stop webcam
+  if (webcamStream) {
+    webcamStream.getTracks().forEach(t => t.stop());
+  }
+
+  // Send calibration data to Flask
+  try {
+    const resp = await fetch('/save_calibration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        calibration:    calibData,
+        screen_width:   window.innerWidth,
+        screen_height:  window.innerHeight,
+        dot_count:      calibData.length
+      })
+    });
+
+    const result = await resp.json();
+    if (result.status === 'ok') {
+      document.getElementById('done-status').textContent =
+        `✅ Model trained! Redirecting to exam...`;
+      await sleep(1500);
+      window.location.href = result.redirect;
+    } else {
+      document.getElementById('done-status').textContent =
+        '⚠️ Calibration saved, proceeding...';
+      await sleep(1500);
+      window.location.href = result.redirect || '/profile';
+    }
+  } catch(e) {
+    document.getElementById('done-status').textContent =
+      'Proceeding to exam...';
+    await sleep(1500);
+    window.location.href = '/profile';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function median(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2;
+}
+</script>
+</body>
+</html>

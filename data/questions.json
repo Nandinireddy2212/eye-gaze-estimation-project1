@@ -1,0 +1,52 @@
+{
+  "exams": [
+    {
+      "id": "EXAM001",
+      "title": "Artificial Intelligence Fundamentals",
+      "subject": "AI & ML",
+      "duration_minutes": 10,
+      "questions": [
+        {
+          "id": 1,
+          "question": "Which of the following is a supervised learning algorithm?",
+          "options": ["K-Means", "DBSCAN", "Linear Regression", "PCA"],
+          "answer": "Linear Regression"
+        },
+        {
+          "id": 2,
+          "question": "What does CNN stand for in deep learning?",
+          "options": [
+            "Central Neural Network",
+            "Convolutional Neural Network",
+            "Clustered Node Network",
+            "Compiled Neural Node"
+          ],
+          "answer": "Convolutional Neural Network"
+        },
+        {
+          "id": 3,
+          "question": "Which activation function is commonly used in the output layer for binary classification?",
+          "options": ["ReLU", "Tanh", "Sigmoid", "Softmax"],
+          "answer": "Sigmoid"
+        },
+        {
+          "id": 4,
+          "question": "What is overfitting in machine learning?",
+          "options": [
+            "Model performs well on both train and test data",
+            "Model performs well on training data but poorly on test data",
+            "Model performs poorly on training data",
+            "Model has too few parameters"
+          ],
+          "answer": "Model performs well on training data but poorly on test data"
+        },
+        {
+          "id": 5,
+          "question": "Which library is used for real-time face mesh detection in this project?",
+          "options": ["TensorFlow", "MediaPipe", "PyTorch", "Scikit-learn"],
+          "answer": "MediaPipe"
+        }
+      ]
+    }
+  ]
+}

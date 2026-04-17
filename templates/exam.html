@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+  nav, footer { display: none !important; }
+  body { background: #f0f4ff !important; }
+  .page-wrapper { padding: 0 !important; max-width: 100% !important; }
+
+  /* ── Top Bar ───────────────────────────────────────────── */
+  .exam-topbar {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    padding: 12px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 15px rgba(102,126,234,0.4);
+  }
+  .exam-title { font-size: 1.1rem; font-weight: 700; }
+  .exam-timer {
+    background: rgba(255,255,255,0.2);
+    border-radius: 50px;
+    padding: 6px 20px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+  .exam-timer.warning { background: rgba(255,100,100,0.4); animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* ── Main Layout ───────────────────────────────────────── */
+  .exam-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+    height: calc(100vh - 60px);
+  }
+
+  /* ── Questions Panel (left) ────────────────────────────── */
+  .questions-panel {
+    padding: 30px;
+    overflow-y: auto;
+    background: #f0f4ff;
+  }
+  .question-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+    border-left: 5px solid #667eea;
+    transition: all 0.2s;
+  }
+  .question-card:hover { box-shadow: 0 8px 25px rgba(102,126,234,0.15); }
+  .question-num {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-right: 10px;
+  }
+  .question-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 15px;
+  }
+  .option-label {
+    display: block;
+    padding: 10px 15px;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+  }
+  .option-label:hover { border-color: #667eea; background: #f0f4ff; }
+  input[type="radio"]:checked + .option-label {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f0f4ff, #e8ecff);
+    font-weight: 600;
+  }
+  input[type="radio"] { display: none; }
+
+  /* ── Webcam Panel (right) ──────────────────────────────── */
+  .webcam-panel {
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 15px;
+    overflow-y: auto;
+  }
+  .webcam-title {
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #webcam-feed {
+    width: 280px;
+    height: 210px;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.2);
+    object-fit: cover;
+  }
+
+  /* ── Status Badges ─────────────────────────────────────── */
+  .status-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .status-badge {
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 8px;
+    text-align: center;
+    color: white;
+  }
+  .status-badge .label {
+    font-size: 0.65rem;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-badge .value {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .status-ok   { color: #38ef7d; }
+  .status-warn { color: #ffd700; }
+  .status-bad  { color: #f5576c; }
+
+  /* ── Event Log ─────────────────────────────────────────── */
+  .event-log {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .event-log-title {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .event-item {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    color: white;
+  }
+  .event-warn { background: rgba(255,215,0,0.2); border-left: 3px solid #ffd700; }
+  .event-bad  { background: rgba(245,87,108,0.2); border-left: 3px solid #f5576c; }
+  .event-ok   { background: rgba(56,239,125,0.2); border-left: 3px solid #38ef7d; }
+
+  /* ── Submit Button ─────────────────────────────────────── */
+  .btn-submit-exam {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    border: none;
+    border-radius: 50px;
+    padding: 12px 30px;
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.3s;
+  }
+  .btn-submit-exam:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(56,239,125,0.4);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Top Bar -->
+<div class="exam-topbar">
+  <div class="exam-title">
+    📋 {{ exam.title }}
+    <span style="opacity:0.7; font-weight:400; font-size:0.9rem;">
+      &nbsp;|&nbsp; {{ student.name }}
+    </span>
+  </div>
+  <div class="exam-timer" id="timer">⏱ 10:00</div>
+  <div style="font-size:0.85rem; opacity:0.8;">
+    <i class="fa fa-eye me-1"></i> AI Proctoring Active
+  </div>
+</div>
+
+<!-- Main Layout -->
+<div class="exam-layout">
+
+  <!-- LEFT: Questions -->
+  <div class="questions-panel">
+    <form method="POST" action="/submit_exam" id="exam-form">
+      <input type="hidden" name="exam_id" value="{{ exam.id }}"/>
+
+      <!-- Question Progress Dots -->
+<div style="display:flex; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
+  {% for q in exam.questions %}
+  <div id="dot-q{{ q.id }}"
+       style="width:35px; height:35px; border-radius:50%;
+              background:#e2e8f0; display:flex; align-items:center;
+              justify-content:center; font-weight:700; font-size:0.85rem;
+              cursor:pointer; transition:all 0.2s; color:#666;"
+       onclick="goToQuestion({{ loop.index0 }})">
+    {{ q.id }}
+  </div>
+  {% endfor %}
+</div>
+
+{% for q in exam.questions %}
+<div class="question-card" id="qcard-{{ loop.index0 }}"
+     style="display:{% if loop.first %}block{% else %}none{% endif %};">
+
+  <!-- Question header -->
+  <div style="display:flex; justify-content:space-between;
+              align-items:center; margin-bottom:15px;">
+    <span style="color:#667eea; font-size:0.85rem; font-weight:600;">
+      Question {{ q.id }} of {{ exam.questions|length }}
+    </span>
+    <span id="answered-{{ loop.index0 }}"
+          style="font-size:0.8rem; color:#aaa;">Not answered</span>
+  </div>
+
+  <div class="question-text">
+    <span class="question-num">{{ q.id }}</span>
+    {{ q.question }}
+  </div>
+
+  {% for option in q.options %}
+  <div>
+    <input type="radio"
+           name="q{{ q.id }}"
+           id="q{{ q.id }}_{{ loop.index }}"
+           value="{{ option }}"
+           onchange="markAnswered({{ loop.index0 - 1 + 1 - 1}}, this)"/>
+    <label class="option-label" for="q{{ q.id }}_{{ loop.index }}">
+      <span style="color:#667eea; font-weight:700; margin-right:8px;">
+        {{ loop.index }}.
+      </span>
+      {{ option }}
+    </label>
+  </div>
+  {% endfor %}
+
+  <!-- Navigation Buttons -->
+  <div style="display:flex; justify-content:space-between;
+              margin-top:25px; gap:10px;">
+    {% if not loop.first %}
+    <button type="button"
+            onclick="goToQuestion({{ loop.index0 - 1 }})"
+            style="background:#e2e8f0; border:none; border-radius:50px;
+                   padding:10px 25px; font-weight:600; cursor:pointer;
+                   color:#555; transition:all 0.2s;">
+      ← Previous
+    </button>
+    {% else %}
+    <div></div>
+    {% endif %}
+
+    {% if not loop.last %}
+    <button type="button"
+            onclick="goToQuestion({{ loop.index0 + 1 }})"
+            style="background:linear-gradient(135deg,#667eea,#764ba2);
+                   border:none; border-radius:50px; padding:10px 25px;
+                   font-weight:600; cursor:pointer; color:white;
+                   transition:all 0.2s;">
+      Next →
+    </button>
+    {% else %}
+    <button type="button" onclick="submitExam()"
+            style="background:linear-gradient(135deg,#11998e,#38ef7d);
+                   border:none; border-radius:50px; padding:10px 25px;
+                   font-weight:600; cursor:pointer; color:white;">
+      ✅ Submit Exam
+    </button>
+    {% endif %}
+  </div>
+
+</div>
+{% endfor %}
+    </form>
+  </div>
+
+  <!-- RIGHT: Webcam + Status -->
+  <div class="webcam-panel">
+    <div class="webcam-title">🎥 Live Proctoring</div>
+
+    <!-- Webcam Feed -->
+    <video id="webcam-feed" autoplay muted playsinline></video>
+
+    <!-- Hidden canvas for frame capture -->
+    <canvas id="capture-canvas" style="display:none;"
+            width="320" height="240"></canvas>
+
+    <!-- Status Badges -->
+    <div class="status-grid">
+      <div class="status-badge">
+        <div class="label">👁 Gaze</div>
+        <div class="value status-ok" id="status-gaze">Center</div>
+      </div>
+      <div class="status-badge">
+        <div class="label">👤 Faces</div>
+        <div class="value status-ok" id="status-faces">1</div>
+      </div>
+      <div class="status-badge">
+        <div class="label">📱 Phone</div>
+        <div class="value status-ok" id="status-phone">None</div>
+      </div>
+      <div class="status-badge">
+        <div class="label">👄 Lips</div>
+        <div class="value status-ok" id="status-lips">Still</div>
+      </div>
+    </div>
+
+    <!-- Live Event Log -->
+    <div class="event-log">
+      <div class="event-log-title">📋 Live Events</div>
+      <div id="event-list">
+        <div class="event-item event-ok">✅ Proctoring started</div>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <button class="btn-submit-exam" onclick="submitExam()">
+      ✅ Submit Exam
+    </button>
+  </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+  // ── Config ─────────────────────────────────────────────────
+  const EXAM_DURATION = {{ exam.duration_minutes }} * 60; // seconds
+  const EXAM_ID       = "{{ exam.id }}";
+  let   timeLeft      = EXAM_DURATION;
+  let   timerInterval = null;
+  let   gazeInterval  = null;
+
+  // ── Start Webcam ───────────────────────────────────────────
+  let webcamStream = null;
+  async function startWebcam() {
+    try {
+      webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      document.getElementById("webcam-feed").srcObject = webcamStream;
+      addEvent("✅ Webcam connected", "ok");
+      startGazeTracking();
+    } catch (err) {
+      addEvent("❌ Webcam error: " + err.message, "bad");
+    }
+  }
+
+  // ── Timer ──────────────────────────────────────────────────
+  function startTimer() {
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      const m = Math.floor(timeLeft / 60).toString().padStart(2, "0");
+      const s = (timeLeft % 60).toString().padStart(2, "0");
+      const el = document.getElementById("timer");
+      el.textContent = `⏱ ${m}:${s}`;
+      if (timeLeft <= 60) el.classList.add("warning");
+      if (timeLeft <= 0)  { clearInterval(timerInterval); submitExam(); }
+    }, 1000);
+  }
+
+  // ── Capture frame + send to Flask for AI analysis ──────────
+  async function captureAndAnalyze() {
+    const video  = document.getElementById("webcam-feed");
+    const canvas = document.getElementById("capture-canvas");
+    const ctx    = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const frameData = canvas.toDataURL("image/jpeg", 0.7);
+
+    fetch("/analyze_frame", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ frame: frameData, exam_id: EXAM_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.detected) {
+        // Face not seen — show warning, pause all status updates
+        document.getElementById("status-gaze").textContent  = "No Face!";
+        document.getElementById("status-gaze").className    = "value status-bad";
+        document.getElementById("status-faces").textContent = "No Face!";
+        document.getElementById("status-faces").className   = "value status-bad";
+
+        // Show big warning overlay
+        showFaceWarning(true);
+        addEvent("⚠️ Face not visible — please stay in frame!", "bad");
+      } else {
+        // Face seen — hide warning, update normally
+        showFaceWarning(false);
+        updateStatus(data);
+      }
+    })
+    .catch(err => console.warn("Analysis error:", err));
+
+    return Promise.resolve();
+  }
+
+  // ── Face warning overlay ────────────────────────────────────
+  let faceWarningEl = null;
+  function showFaceWarning(show) {
+    if (!faceWarningEl) {
+      faceWarningEl = document.createElement("div");
+      faceWarningEl.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        background: #dc2626;
+        color: white;
+        text-align: center;
+        padding: 14px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        z-index: 9999;
+        display: none;
+      `;
+      faceWarningEl.textContent = "⚠️ FACE NOT DETECTED — Please stay in front of camera!";
+      document.body.appendChild(faceWarningEl);
+    }
+    faceWarningEl.style.display = show ? "block" : "none";
+  }
+
+  // ── Update status badges from AI response ──────────────────
+  function updateStatus(data) {
+    // Face not detected alert
+    if (!data.detected) {
+      addEvent("⚠️ Face not visible!", "bad");
+      document.getElementById("status-gaze").textContent = "No Face";
+      document.getElementById("status-gaze").className = "value status-bad";
+    }
+    // Gaze direction
+    const gazeEl = document.getElementById("status-gaze");
+    gazeEl.textContent = data.gaze || "Center";
+    gazeEl.className   = "value " +
+      (data.gaze === "Center" ? "status-ok" : "status-warn");
+
+    // Face count
+    const faceEl = document.getElementById("status-faces");
+    faceEl.textContent = data.faces || "1";
+    faceEl.className   = "value " +
+      (parseInt(data.faces) > 1 ? "status-bad" : "status-ok");
+
+    // Phone
+    const phoneEl = document.getElementById("status-phone");
+    phoneEl.textContent = data.phone ? "Detected!" : "None";
+    phoneEl.className   = "value " + (data.phone ? "status-bad" : "status-ok");
+
+    // Lips
+    const lipsEl = document.getElementById("status-lips");
+    lipsEl.textContent = data.lips ? "Moving!" : "Still";
+    lipsEl.className   = "value " + (data.lips ? "status-warn" : "status-ok");
+
+    // Log events
+    if (data.phone)        addEvent("📱 Phone detected!", "bad");
+    if (parseInt(data.faces) > 1) addEvent("👥 Multiple faces!", "bad");
+    if (data.lips)         addEvent("👄 Lip movement detected", "warn");
+    if (data.gaze && data.gaze !== "Center")
+                           addEvent(`👁 Gaze: ${data.gaze}`, "warn");
+  }
+
+  // ── Add event to live log ───────────────────────────────────
+  function addEvent(msg, type) {
+    const list = document.getElementById("event-list");
+    const now  = new Date().toLocaleTimeString();
+    const div  = document.createElement("div");
+    div.className   = `event-item event-${type}`;
+    div.textContent = `[${now}] ${msg}`;
+    list.prepend(div); // newest on top
+    // Keep max 20 events
+    while (list.children.length > 20) list.removeChild(list.lastChild);
+  }
+
+  // ── Start gaze tracking loop ────────────────────────────────
+  let isProcessing = false;
+
+  function startGazeTracking() {
+    gazeInterval = setInterval(() => {
+      if (!isProcessing) {
+        isProcessing = true;
+        captureAndAnalyze().finally(() => {
+          isProcessing = false;
+        });
+      }
+    }, 500);
+    addEvent("🔍 AI analysis started", "ok");
+  }
+
+  // ── Submit exam ─────────────────────────────────────────────
+  function submitExam() {
+    clearInterval(timerInterval);
+    clearInterval(gazeInterval);
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(t => t.stop());
+    }
+
+    // Capture exam page screenshot before submitting
+    const questionsPanel = document.documentElement;
+    html2canvas(questionsPanel, {
+      scale: 1,
+      useCORS: true,
+      backgroundColor: "#f0f4ff"
+    }).then(canvas => {
+      const screenshotData = canvas.toDataURL("image/jpeg", 0.8);
+      fetch("/save_screenshot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ screenshot: screenshotData })
+      }).finally(() => {
+        document.getElementById("exam-form").submit();
+      });
+    }).catch(() => {
+      document.getElementById("exam-form").submit();
+    });
+  }
+  // ── Question Navigation ─────────────────────────────────────
+  let currentQ = 0;
+  const totalQ = {{ exam.questions|length }};
+
+  function goToQuestion(index) {
+    // Hide all
+    for (let i = 0; i < totalQ; i++) {
+      document.getElementById(`qcard-${i}`).style.display = "none";
+      const dot = document.getElementById(`dot-q${i+1}`);
+      if (dot) dot.style.background = "#e2e8f0";
+    }
+    // Show selected
+    document.getElementById(`qcard-${index}`).style.display = "block";
+    const activeDot = document.getElementById(`dot-q${index+1}`);
+    if (activeDot) {
+      activeDot.style.background = "linear-gradient(135deg,#667eea,#764ba2)";
+      activeDot.style.color = "white";
+    }
+    currentQ = index;
+  }
+
+  function markAnswered(qIndex, radio) {
+    const dot = document.getElementById(`dot-q${qIndex+1}`);
+    if (dot) {
+      dot.style.background = "linear-gradient(135deg,#11998e,#38ef7d)";
+      dot.style.color = "white";
+    }
+    const label = document.getElementById(`answered-${qIndex}`);
+    if (label) label.textContent = "✅ Answered";
+  }
+
+  // Init first dot as active
+  goToQuestion(0);
+
+  // ── Init ────────────────────────────────────────────────────
+  startWebcam();
+  startTimer();
+</script>
+{% endblock %}

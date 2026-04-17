@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+  body { background: #f0f4ff !important; }
+
+  /* ── Score Hero ────────────────────────────────────────── */
+  .score-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    padding: 40px;
+    color: white;
+    text-align: center;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-hero::before {
+    content: "👁️";
+    position: absolute;
+    font-size: 8rem;
+    opacity: 0.07;
+    top: -10px;
+    right: 20px;
+  }
+  .score-circle {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    border: 4px solid rgba(255,255,255,0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+  }
+  .score-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .score-label {
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+
+  /* ── Section Cards ─────────────────────────────────────── */
+  .section-card {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+  }
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f4ff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── Question Results ──────────────────────────────────── */
+  .result-item {
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border-left: 5px solid;
+  }
+  .result-correct {
+    background: #f0fff4;
+    border-color: #38ef7d;
+  }
+  .result-wrong {
+    background: #fff5f5;
+    border-color: #f5576c;
+  }
+  .result-question {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 8px;
+  }
+  .result-answer {
+    font-size: 0.9rem;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Timeline ──────────────────────────────────────────── */
+  .timeline-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f4ff;
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .timeline-time {
+    font-size: 0.8rem;
+    color: #888;
+    min-width: 80px;
+  }
+  .timeline-event {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #2d3748;
+  }
+
+  /* ── Heatmap placeholder ───────────────────────────────── */
+  .heatmap-box {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    color: white;
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+  }
+  .heatmap-box img {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  /* ── Snapshot Grid ─────────────────────────────────────── */
+  .snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 15px;
+  }
+  .snapshot-item {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    position: relative;
+  }
+  .snapshot-item img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+  }
+  .snapshot-label {
+    background: rgba(0,0,0,0.7);
+    color: white;
+    font-size: 0.7rem;
+    padding: 5px 8px;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+  }
+
+  /* ── PDF Button ────────────────────────────────────────── */
+  .btn-pdf {
+    background: linear-gradient(135deg, #f5576c, #f093fb);
+    border: none;
+    border-radius: 50px;
+    padding: 14px 40px;
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+  }
+  .btn-pdf:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(245,87,108,0.4);
+    color: white;
+  }
+  .btn-back {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 50px;
+    padding: 14px 40px;
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+  }
+  .btn-back:hover {
+    transform: translateY(-2px);
+    color: white;
+  }
+
+  /* ── Stats Row ─────────────────────────────────────────── */
+  .stat-pill {
+    background: #f0f4ff;
+    border-radius: 50px;
+    padding: 8px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #667eea;
+    display: inline-block;
+    margin: 4px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Score Hero -->
+<div class="score-hero">
+  <div class="score-circle">
+    <div class="score-number">
+      {{ results.score }}/{{ results.total }}
+    </div>
+    <div class="score-label">Score</div>
+  </div>
+  <h2 class="fw-bold mb-1">
+    {% set pct = (results.score / results.total * 100)|round|int %}
+    {% if pct >= 80 %}🎉 Excellent Work!
+    {% elif pct >= 60 %}👍 Good Job!
+    {% elif pct >= 40 %}📚 Keep Practicing!
+    {% else %}💪 Don't Give Up!
+    {% endif %}
+  </h2>
+  <p style="opacity:0.8;">{{ results.exam_title }}</p>
+  <div class="d-flex justify-content-center gap-3 flex-wrap mt-3">
+    <span class="stat-pill" style="background:rgba(255,255,255,0.2);color:white;">
+      📅 {{ results.timestamp }}
+    </span>
+    <span class="stat-pill" style="background:rgba(255,255,255,0.2);color:white;">
+      🎯 {{ pct }}% Score
+    </span>
+    <span class="stat-pill" style="background:rgba(255,255,255,0.2);color:white;">
+      👤 {{ student.name }}
+    </span>
+  </div>
+</div>
+
+<div class="row">
+  <!-- LEFT COLUMN -->
+  <div class="col-lg-8">
+
+    <!-- Question Results -->
+    <div class="section-card">
+      <div class="section-title">
+        📝 Question-wise Results
+      </div>
+      {% for r in results.results %}
+      <div class="result-item {{ 'result-correct' if r.is_correct else 'result-wrong' }}">
+        <div class="result-question">
+          {{ loop.index }}. {{ r.question }}
+        </div>
+        <div class="result-answer">
+          <span>
+            Your answer:
+            <strong style="color:{{ '#11998e' if r.is_correct else '#f5576c' }};">
+              {{ r.selected }}
+            </strong>
+          </span>
+          {% if not r.is_correct %}
+          <span>
+            Correct:
+            <strong style="color:#11998e;">{{ r.correct }}</strong>
+          </span>
+          {% endif %}
+          <span>{{ '✅' if r.is_correct else '❌' }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Attention Heatmap -->
+    <div class="section-card">
+      <div class="section-title">
+        🔥 Attention Heatmap
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <p class="text-muted small mb-2">Screen Gaze Distribution</p>
+          <div class="heatmap-box">
+            {% if results.heatmap_screen %}
+              <img src="/reports/{{ results.heatmap_screen }}"
+                   alt="Screen Heatmap"/>
+            {% else %}
+              <div style="font-size:3rem;">🔥</div>
+              <p style="opacity:0.6; font-size:0.85rem;">
+                Heatmap will appear here after AI analysis
+              </p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <p class="text-muted small mb-2">Exam Page Overlay</p>
+          <div class="heatmap-box">
+            {% if results.heatmap_overlay %}
+              <img src="/reports/{{ results.heatmap_overlay }}"
+                   alt="Overlay Heatmap"/>
+            {% else %}
+              <div style="font-size:3rem;">🗺️</div>
+              <p style="opacity:0.6; font-size:0.85rem;">
+                Overlay heatmap will appear here after AI analysis
+              </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Snapshots -->
+    <div class="section-card">
+      <div class="section-title">
+        📸 Flagged Event Snapshots
+      </div>
+      {% if results.snapshots %}
+        <div class="snapshot-grid">
+          {% for snap in results.snapshots %}
+          <div class="snapshot-item">
+            <img src="/static/snapshots/{{ snap.file }}"
+                 alt="Snapshot"/>
+            <div class="snapshot-label">
+              {{ snap.event }} — {{ snap.time }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align:center; padding:30px; color:#aaa;">
+          <div style="font-size:2.5rem;">✅</div>
+          <p>No suspicious activity detected!</p>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col-lg-4">
+
+    <!-- Proctoring Summary -->
+    <div class="section-card">
+      <div class="section-title">
+        🛡️ Proctoring Summary
+      </div>
+      {% set events = results.events if results.events else [] %}
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; justify-content:space-between;
+                    align-items:center; padding:10px;
+                    background:#f0f4ff; border-radius:10px;">
+          <span>📱 Phone Detections</span>
+          <span class="fw-bold" style="color:
+            {{ '#f5576c' if results.phone_count > 0 else '#11998e' }};">
+            {{ results.phone_count if results.phone_count else 0 }}
+          </span>
+        </div>
+        <div style="display:flex; justify-content:space-between;
+                    align-items:center; padding:10px;
+                    background:#f0f4ff; border-radius:10px;">
+          <span>👥 Multi-face Events</span>
+          <span class="fw-bold" style="color:
+            {{ '#f5576c' if results.face_count > 0 else '#11998e' }};">
+            {{ results.face_count if results.face_count else 0 }}
+          </span>
+        </div>
+        <div style="display:flex; justify-content:space-between;
+                    align-items:center; padding:10px;
+                    background:#f0f4ff; border-radius:10px;">
+          <span>👄 Lip Movements</span>
+          <span class="fw-bold" style="color:
+            {{ '#ffd700' if results.lip_count > 0 else '#11998e' }};">
+            {{ results.lip_count if results.lip_count else 0 }}
+          </span>
+        </div>
+        <div style="display:flex; justify-content:space-between;
+                    align-items:center; padding:10px;
+                    background:#f0f4ff; border-radius:10px;">
+          <span>👁️ Gaze Away Events</span>
+          <span class="fw-bold" style="color:
+            {{ '#ffd700' if results.gaze_away_count > 0 else '#11998e' }};">
+            {{ results.gaze_away_count if results.gaze_away_count else 0 }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Overall Trust Score -->
+      {% set total_flags = (results.phone_count or 0) +
+                           (results.face_count or 0) +
+                           (results.lip_count or 0) +
+                           (results.gaze_away_count or 0) %}
+      {% set trust = [100 - (total_flags * 5), 0]|max %}
+      <div style="margin-top:20px; text-align:center;">
+        <div style="font-size:0.85rem; color:#888; margin-bottom:8px;">
+          Trust Score
+        </div>
+        <div style="font-size:2.5rem; font-weight:800;
+                    color:{{ '#11998e' if trust >= 80
+                             else '#ffd700' if trust >= 50
+                             else '#f5576c' }};">
+          {{ trust }}%
+        </div>
+        <div style="background:#f0f4ff; border-radius:50px;
+                    height:8px; margin-top:8px; overflow:hidden;">
+          <div style="height:100%; width:{{ trust }}%;
+                      background:{{ 'linear-gradient(135deg,#11998e,#38ef7d)'
+                                    if trust >= 80
+                                    else 'linear-gradient(135deg,#f5a623,#ffd700)'
+                                    if trust >= 50
+                                    else 'linear-gradient(135deg,#f093fb,#f5576c)' }};
+                      border-radius:50px; transition:width 1s;">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Behavioral Timeline -->
+    <div class="section-card">
+      <div class="section-title">
+        📋 Behavioral Timeline
+      </div>
+      {% if results.events %}
+        {% for ev in results.events %}
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background:
+            {{ '#f5576c' if 'Phone' in ev.type or 'Face' in ev.type
+               else '#ffd700' if 'Lip' in ev.type or 'Gaze' in ev.type
+               else '#38ef7d' }};">
+          </div>
+          <div class="timeline-time">{{ ev.time }}</div>
+          <div class="timeline-event">{{ ev.type }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="text-align:center; padding:20px; color:#aaa;">
+          <div style="font-size:2rem;">✅</div>
+          <p class="small">No events logged</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="section-card">
+      <div class="section-title">⬇️ Export Report</div>
+      <div class="d-flex flex-column gap-3">
+        <a href="/download_report" class="btn-pdf text-center">
+          📄 Download PDF Report
+        </a>
+        <a href="/profile" class="btn-back text-center">
+          🏠 Back to Dashboard
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

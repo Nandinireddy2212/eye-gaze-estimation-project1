@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Welcome Banner -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <img src="{{ student.photo }}" alt="avatar"
+               style="width:80px; height:80px; border-radius:50%; border:3px solid white; background:white;"/>
+        </div>
+        <div class="col">
+          <h2 class="mb-1 fw-bold">Hey, {{ student.name }}! 👋</h2>
+          <p class="mb-0 opacity-75">
+            <i class="fa fa-university me-2"></i>{{ student.college }}
+          </p>
+          <p class="mb-0 opacity-75">
+            <i class="fa fa-code-branch me-2"></i>{{ student.branch }}
+            &nbsp;|&nbsp;
+            <i class="fa fa-calendar me-2"></i>{{ student.year }}
+            &nbsp;|&nbsp;
+            <i class="fa fa-id-badge me-2"></i>{{ student.id }}
+          </p>
+        </div>
+        <div class="col-auto text-end">
+          <div style="background:rgba(255,255,255,0.2); border-radius:15px; padding:15px 25px;">
+            <div style="font-size:2rem; font-weight:700;">{{ student.avg_score }}%</div>
+            <div style="font-size:0.85rem; opacity:0.85;">Average Score</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row mb-4 g-3">
+  <div class="col-md-4">
+    <div class="card p-4 text-center h-100">
+      <div style="font-size:2.5rem;">📝</div>
+      <div style="font-size:1.8rem; font-weight:700; color:#667eea;">
+        {{ student.exams_taken }}
+      </div>
+      <div class="text-muted">Exams Taken</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-4 text-center h-100">
+      <div style="font-size:2.5rem;">🎯</div>
+      <div style="font-size:1.8rem; font-weight:700; color:#11998e;">
+        {{ student.avg_score }}%
+      </div>
+      <div class="text-muted">Average Score</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-4 text-center h-100">
+      <div style="font-size:2.5rem;">🏆</div>
+      <div style="font-size:1.8rem; font-weight:700; color:#f5576c;">
+        {% if student.avg_score >= 90 %}A+
+        {% elif student.avg_score >= 80 %}A
+        {% elif student.avg_score >= 70 %}B
+        {% elif student.avg_score >= 60 %}C
+        {% else %}Keep Trying!
+        {% endif %}
+      </div>
+      <div class="text-muted">Current Grade</div>
+    </div>
+  </div>
+</div>
+
+<!-- Available Exams -->
+<div class="row">
+  <div class="col-12">
+    <h4 class="fw-bold mb-3">
+      <i class="fa fa-book-open me-2" style="color:#667eea;"></i>
+      Available Exams
+    </h4>
+  </div>
+
+  {% for exam in exams %}
+  <div class="col-md-6 mb-4">
+    <div class="card p-4 h-100">
+      <!-- Exam Header -->
+      <div class="d-flex align-items-center mb-3">
+        <div style="background:linear-gradient(135deg,#667eea,#764ba2);
+                    width:50px; height:50px; border-radius:12px;
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:1.5rem; margin-right:15px;">
+          📋
+        </div>
+        <div>
+          <h5 class="mb-0 fw-bold">{{ exam.title }}</h5>
+          <small class="text-muted">{{ exam.subject }}</small>
+        </div>
+      </div>
+
+      <!-- Exam Details -->
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <div style="background:#f0f4ff; border-radius:10px; padding:10px; text-align:center;">
+            <i class="fa fa-question-circle" style="color:#667eea;"></i>
+            <div class="fw-bold">{{ exam.questions|length }}</div>
+            <small class="text-muted">Questions</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div style="background:#f0fff4; border-radius:10px; padding:10px; text-align:center;">
+            <i class="fa fa-clock" style="color:#11998e;"></i>
+            <div class="fw-bold">{{ exam.duration_minutes }} min</div>
+            <small class="text-muted">Duration</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proctoring Notice -->
+      <div style="background:#fff8e1; border-radius:10px; padding:10px; margin-bottom:15px;">
+        <small>
+          <i class="fa fa-eye me-2" style="color:#f5a623;"></i>
+          <strong>AI Proctored</strong> — Eye gaze, phone & behavior monitored
+        </small>
+      </div>
+
+      <!-- Start Button -->
+      <a href="/calibration/{{ exam.id }}"
+         class="btn btn-primary w-100 mt-auto">
+        <i class="fa fa-play me-2"></i>Start Exam
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if not exams %}
+  <div class="col-12">
+    <div class="card p-5 text-center">
+      <div style="font-size:3rem;">📭</div>
+      <h5 class="text-muted mt-2">No exams available right now</h5>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

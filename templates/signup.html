@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center mt-4">
+  <div class="col-md-5">
+
+    <div class="text-center mb-4">
+      <div style="font-size:4rem;">🎓</div>
+      <h2 style="font-weight:700; color:#667eea;">Create Account</h2>
+      <p class="text-muted">Join ProctorEye as a new student</p>
+    </div>
+
+    <div class="card p-4">
+      {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+      {% endif %}
+      {% if success %}
+        <div class="alert alert-success">{{ success }}
+          <a href="/login" class="fw-bold">Click here to login →</a>
+        </div>
+      {% endif %}
+
+      <form method="POST" action="/signup">
+        <div class="mb-3">
+          <label class="form-label fw-bold">
+            <i class="fa fa-user me-2 text-primary"></i>Full Name
+          </label>
+          <input type="text" name="name" class="form-control form-control-lg"
+                 placeholder="Enter your full name" required
+                 style="border-radius:12px; border:2px solid #e0e7ff;"/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">
+            <i class="fa fa-id-badge me-2 text-primary"></i>Student ID
+          </label>
+          <input type="text" name="student_id" class="form-control form-control-lg"
+                 placeholder="e.g. CB004" required
+                 style="border-radius:12px; border:2px solid #e0e7ff;"/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">
+            <i class="fa fa-graduation-cap me-2 text-primary"></i>Branch
+          </label>
+          <select name="branch" class="form-control form-control-lg" required
+                  style="border-radius:12px; border:2px solid #e0e7ff;">
+            <option value="">Select Branch</option>
+            <option>AI & ML</option>
+            <option>Computer Science</option>
+            <option>Information Technology</option>
+            <option>Electronics & Communication</option>
+            <option>Mechanical Engineering</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">
+            <i class="fa fa-calendar me-2 text-primary"></i>Year
+          </label>
+          <select name="year" class="form-control form-control-lg" required
+                  style="border-radius:12px; border:2px solid #e0e7ff;">
+            <option value="">Select Year</option>
+            <option>1st Year</option>
+            <option>2nd Year</option>
+            <option>3rd Year</option>
+            <option>4th Year</option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-bold">
+            <i class="fa fa-lock me-2 text-primary"></i>Password
+          </label>
+          <input type="password" name="password" class="form-control form-control-lg"
+                 placeholder="Create a password" required
+                 style="border-radius:12px; border:2px solid #e0e7ff;"/>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 btn-lg">
+          <i class="fa fa-user-plus me-2"></i>Create Account
+        </button>
+      </form>
+
+      <hr class="my-4"/>
+      <p class="text-center text-muted mb-0">
+        Already have an account?
+        <a href="/login" style="color:#667eea; font-weight:600;">Login here</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

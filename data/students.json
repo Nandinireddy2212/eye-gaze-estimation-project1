@@ -1,0 +1,48 @@
+{
+  "students": [
+    {
+      "id": "CB001",
+      "password": "nandini123",
+      "name": "Nandini Reddy",
+      "branch": "AI & ML",
+      "college": "Chaitanya Bharathi Institute of Technology",
+      "year": "4th Year",
+      "photo": "https://api.dicebear.com/7.x/thumbs/svg?seed=Nandini",
+      "exams_taken": 36,
+      "avg_score": 66.0
+    },
+    {
+      "id": "CB002",
+      "password": "arjun123",
+      "name": "Arjun Sharma",
+      "branch": "AI & ML",
+      "college": "Chaitanya Bharathi Institute of Technology",
+      "year": "4th Year",
+      "photo": "https://api.dicebear.com/7.x/thumbs/svg?seed=Arjun",
+      "exams_taken": 1,
+      "avg_score": 85
+    },
+    {
+      "id": "CB003",
+      "password": "priya123",
+      "name": "Priya Menon",
+      "branch": "AI & ML",
+      "college": "Chaitanya Bharathi Institute of Technology",
+      "year": "4th Year",
+      "photo": "https://api.dicebear.com/7.x/thumbs/svg?seed=Priya",
+      "exams_taken": 3,
+      "avg_score": 91
+    },
+    {
+      "id": "IT001",
+      "password": "nish123",
+      "name": "nish",
+      "branch": "Information Technology",
+      "college": "Chaitanya Bharathi Institute of Technology",
+      "year": "2nd Year",
+      "photo": "https://api.dicebear.com/7.x/thumbs/svg?seed=nish",
+      "exams_taken": 0,
+      "avg_score": 0
+    }
+  ]
+}
