@@ -23,6 +23,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from collections import deque
+from core.gaze_dl import predict_gaze_dl
 
 # ── FaceLandmarker ─────────────────────────────────────────────
 options = FaceLandmarkerOptions(
