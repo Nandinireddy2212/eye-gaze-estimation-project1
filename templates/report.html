@@ -429,16 +429,24 @@
       <div class="section-title">
         📋 Behavioral Timeline
       </div>
+
+     {% if results.timeline %}
+        <div style="overflow-x: auto; width: 100%;">
+          <img src="/reports/{{ results.timeline }}"
+              style="width:3000px; height:auto; display:block; border-radius:10px; margin-bottom:15px;">
+        </div>
+      {% endif %}
+
       {% if results.events %}
         {% for ev in results.events %}
         <div class="timeline-item">
           <div class="timeline-dot" style="background:
-            {{ '#f5576c' if 'Phone' in ev.type or 'Face' in ev.type
-               else '#ffd700' if 'Lip' in ev.type or 'Gaze' in ev.type
-               else '#38ef7d' }};">
+            {{ '#f5576c' if 'Phone' in ev['type'] or 'Face' in ev['type']
+              else '#ffd700' if 'Lip' in ev['type'] or 'Gaze' in ev['type']
+              else '#38ef7d' }};">
           </div>
-          <div class="timeline-time">{{ ev.time }}</div>
-          <div class="timeline-event">{{ ev.type }}</div>
+          <div class="timeline-time">{{ ev['time'] }}</div>
+          <div class="timeline-event">{{ ev['type'] }}</div>
         </div>
         {% endfor %}
       {% else %}
@@ -446,6 +454,34 @@
           <div style="font-size:2rem;">✅</div>
           <p class="small">No events logged</p>
         </div>
+      {% endif %}
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">📊 Evaluation Metrics</div>
+
+      {% if results.metrics is not none %}
+
+        <p><b>Gaze Stability:</b>
+          μx = {{ results.metrics['mean_x'] }},
+          σx = {{ results.metrics['std_x'] }}</p>
+
+        <p><b>MAE:</b> {{ results.metrics['mae'] }}</p>
+        <p><b>MSE:</b> {{ results.metrics['mse'] }}</p>
+        <p><b>Mean Angular Error:</b> {{ results.metrics['mange'] }}°</p>
+
+        <hr>
+
+        <p><b>Attention Score:</b> {{ results.metrics['attention_score'] }}%</p>
+        <p><b>Distraction Ratio:</b> {{ results.metrics['distraction_ratio'] }}%</p>
+
+        <hr>
+
+        <p><b>Event Accuracy:</b> {{ results.metrics['event_accuracy'] }}%</p>
+        <p><b>Total Events:</b> {{ results.metrics['total_events'] }}</p>
+
+      {% else %}
+        <p>No metrics available</p>
       {% endif %}
     </div>
 

@@ -14,13 +14,17 @@ class ExamLogger:
     Saves snapshots and builds behavioral timeline.
     """
 
-    def __init__(self, student_id, exam_id):
+    def __init__(self, student_id, exam_id, exam_duration=600):
         self.student_id   = student_id
         self.exam_id      = exam_id
+        self.exam_duration = exam_duration  # in seconds
         self.session_id   = f"{student_id}_{exam_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.events       = []          # list of event dicts
         self.gaze_points  = []          # list of (x, y) for heatmap
         self.snapshots    = []          # list of snapshot info dicts
+        self.timeline     = []
+
+        self.exam_start_time = datetime.now()
 
         # Counters
         self.phone_count     = 0
@@ -34,8 +38,6 @@ class ExamLogger:
 
         print(f"Logger started: {self.session_id}")
 
-    def _get_timestamp(self):
-        return datetime.now().strftime("%H:%M:%S")
 
     def _cooldown_ok(self, event_type):
         """
@@ -52,6 +54,23 @@ class ExamLogger:
             self.last_event_time[event_type] = now
             return True
         return False
+    
+
+    def _get_exam_time(self):
+        now = datetime.now()
+
+        elapsed = int((now - self.exam_start_time).total_seconds())
+
+        remaining = max(0, self.exam_duration - elapsed)
+
+        minutes = remaining // 60
+        seconds = remaining % 60
+
+        return f"{minutes:02d}:{seconds:02d}"
+    
+    def log_timeline_point(self, point):
+        self.timeline.append(point)
+    
 
     def log_event(self, event_type, frame=None, save_snapshot=True):
         """
@@ -62,7 +81,7 @@ class ExamLogger:
         if not self._cooldown_ok(event_type):
             return  # skip — too soon since last same event
 
-        timestamp = self._get_timestamp()
+        timestamp = self._get_exam_time()
 
         # Update counters
         if "Phone"    in event_type: self.phone_count     += 1
@@ -134,6 +153,23 @@ class ExamLogger:
         """
         Returns complete session summary for report page.
         """
+
+        print("Gaze points:", len(self.gaze_points))
+        print("Events:", len(self.events))
+
+        from core.metrics import compute_metrics
+
+        metrics = compute_metrics(
+            self.gaze_points,
+            self.events,
+            self.timeline
+        )
+
+        print("Metrics:", metrics)
+        print("Timeline length:", len(self.timeline))
+        print("Sample timeline:", self.timeline[:10])
+
+
         return {
             "session_id":      self.session_id,
             "events":          self.events,
@@ -143,7 +179,9 @@ class ExamLogger:
             "face_count":      self.face_count,
             "lip_count":       self.lip_count,
             "gaze_away_count": self.gaze_away_count,
-            "total_events":    len(self.events)
+            "total_events":    len(self.events),
+            "metrics":         metrics,
+            "timeline":        self.timeline,
         }
 
     def reset(self):
@@ -160,7 +198,7 @@ def get_logger():
 
 def start_logger(student_id, exam_id):
     global _active_logger
-    _active_logger = ExamLogger(student_id, exam_id)
+    _active_logger = ExamLogger(student_id, exam_id, exam_duration=600)
     return _active_logger
 
 def stop_logger():

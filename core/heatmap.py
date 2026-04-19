@@ -17,6 +17,7 @@ import seaborn as sns
 from PIL import Image
 import os
 
+
 sns.set(style="white")
 REPORTS_DIR = "reports"
 os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -118,6 +119,11 @@ def generate_heatmap_screen(screen_xs, screen_ys,
                 bbox_inches='tight',
                 pad_inches=0)
     plt.close()
+
+    img = cv2.imread(out_path)
+    img = cv2.flip(img, 1)
+    cv2.imwrite(out_path, img)
+    
     return filename
 
 
@@ -176,6 +182,9 @@ def generate_heatmap_overlay(screen_xs, screen_ys,
     if img2 is None:
         return None
     img2 = cv2.resize(img2, (screen_w, screen_h))
+
+    # 🔥 FIX: Flip ONLY heatmap (not background)
+    img2 = cv2.flip(img2, 1)
 
     # ── Step 4: Blend — exact notebook values ─────────────────
     dst = cv2.addWeighted(img1, 0.6, img2, 0.4, 0)

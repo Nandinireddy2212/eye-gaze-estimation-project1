@@ -209,6 +209,33 @@
   </div>
 </div>
 
+<div id="start-overlay" style="
+  position:fixed;
+  top:0; left:0; right:0; bottom:0;
+  background:#0f172a;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:99999;
+  flex-direction:column;
+  color:white;
+">
+  <h2 style="margin-bottom:20px;">Click to Start Exam</h2>
+  <button onclick="startExamProper()" style="
+    padding:15px 40px;
+    font-size:18px;
+    border:none;
+    border-radius:10px;
+    background:#38ef7d;
+    color:black;
+    font-weight:bold;
+    cursor:pointer;
+  ">
+    ▶ Start Exam
+  </button>
+</div>
+
+
 <!-- Main Layout -->
 <div class="exam-layout">
 
@@ -369,6 +396,8 @@
   // ── Start Webcam ───────────────────────────────────────────
   let webcamStream = null;
   async function startWebcam() {
+    enterFullscreen();
+    lockFullscreen();
     try {
       webcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
       document.getElementById("webcam-feed").srcObject = webcamStream;
@@ -378,6 +407,54 @@
       addEvent("❌ Webcam error: " + err.message, "bad");
     }
   }
+
+  function enterFullscreen() {
+    const el = document.documentElement;
+
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.msRequestFullscreen) el.msRequestFullscreen();
+  }
+
+  function startExamProper() {
+    // 🔥 fullscreen MUST be here (user click)
+    const el = document.documentElement;
+
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.msRequestFullscreen) el.msRequestFullscreen();
+
+    // remove overlay
+    document.getElementById("start-overlay").style.display = "none";
+
+    // start everything AFTER fullscreen
+    startWebcam();
+    startTimer();
+  }
+
+
+  function enableFullscreenOnce() {
+    enterFullscreen();
+
+    // remove listeners after first trigger
+    document.removeEventListener("click", enableFullscreenOnce);
+    document.removeEventListener("keydown", enableFullscreenOnce);
+  }
+
+  // 🔥 listen for ANY user action
+  document.addEventListener("click", enableFullscreenOnce);
+  document.addEventListener("keydown", enableFullscreenOnce);
+
+
+  function lockFullscreen() {
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement) {
+        // User tried to exit fullscreen → force back
+        enterFullscreen();
+        addEvent("⚠️ Fullscreen exit attempt detected!", "bad");
+      }
+    });
+}
 
   // ── Timer ──────────────────────────────────────────────────
   function startTimer() {
@@ -577,8 +654,5 @@
   // Init first dot as active
   goToQuestion(0);
 
-  // ── Init ────────────────────────────────────────────────────
-  startWebcam();
-  startTimer();
 </script>
 {% endblock %}

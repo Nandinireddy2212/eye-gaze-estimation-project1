@@ -1,3 +1,4 @@
+from timeline import generate_timeline_graph
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import json
 import os
@@ -299,6 +300,34 @@ def analyze_frame():
                 save_snapshot=False
             )
 
+        # -----------------------------
+        # 🔥 ADD THIS BLOCK (TIMELINE FIX)
+        # -----------------------------
+        import time
+        current_time = int(time.time())
+
+        event_type = "normal"   # default
+
+        if not gaze_result["detected"]:
+            event_type = "face"
+
+        elif det_result["phone"]:
+            event_type = "phone"
+
+        elif det_result["multi_face"]:
+            event_type = "face"
+
+        elif gaze_result["gaze_direction"] != "Center":
+            event_type = "gaze"
+
+        elif det_result["lips"]:
+            event_type = "lip"
+
+        logger.log_timeline_point({
+            "time": current_time,
+            "event": event_type
+        })
+
     response = {
         "gaze":     gaze_result["gaze_direction"],
         "faces":    int(det_result["faces"]),
@@ -361,6 +390,8 @@ def submit_exam():
     # ── Stop logger ────────────────────────────────────────────────────────────
     summary = stop_logger()
 
+    print("Summary keys:", summary.keys())
+
     # ── Generate heatmaps ──────────────────────────────────────────────────────
     heatmap_screen  = None
     heatmap_overlay = None
@@ -395,6 +426,20 @@ def submit_exam():
             break
     save_students(students_data)
 
+
+    # 🔥 GENERATE TIMELINE GRAPH
+    timeline_file = None
+
+    if summary and len(summary["events"]) > 0:
+        try:
+            timeline_file = generate_timeline_graph(summary["events"], exam_duration=600)
+            print("Timeline created:", timeline_file)
+        except Exception as e:
+            print("❌ Timeline ERROR:", e)
+            timeline_file = None
+
+    
+
     # ── Save results to session ────────────────────────────────────────────────
     session["exam_results"] = {
         "exam_title":      exam_data["title"],
@@ -402,6 +447,7 @@ def submit_exam():
         "total":           len(exam_data["questions"]),
         "results":         results,
         "timestamp":       datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "timeline":        timeline_file,
         "heatmap_screen":  heatmap_screen,
         "heatmap_overlay": heatmap_overlay,
         "snapshots":       summary["snapshots"]       if summary else [],
@@ -409,7 +455,9 @@ def submit_exam():
         "phone_count":     summary["phone_count"]     if summary else 0,
         "face_count":      summary["face_count"]      if summary else 0,
         "lip_count":       summary["lip_count"]       if summary else 0,
-        "gaze_away_count": summary["gaze_away_count"] if summary else 0
+        "gaze_away_count": summary["gaze_away_count"] if summary else 0,
+        "metrics": summary["metrics"] if summary else None,
+        "timeline_data": summary["timeline"] if summary else []
     }
 
     return redirect(url_for("report"))
@@ -421,6 +469,7 @@ def submit_exam():
 def report():
     if "student" not in session or "exam_results" not in session:
         return redirect(url_for("profile"))
+    summary = stop_logger()
     return render_template("report.html",
                            student=session["student"],
                            results=session["exam_results"])

@@ -13,7 +13,7 @@
     overflow: hidden;
     width: 100vw;
     height: 100vh;
-    cursor: none;
+    cursor: crosshair;
   }
 
   /* ── Instruction overlay ───────────────────────────────────── */
@@ -48,8 +48,8 @@
     transform: translate(-50%, -50%) scale(0);
     transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
     box-shadow: 0 0 20px #a78bfa, 0 0 40px #7c3aed55;
-    cursor: none;
-    z-index: 50;
+    cursor: pointer;
+    z-index: 999;
   }
   .calib-dot.active  { transform: translate(-50%, -50%) scale(1); }
   .calib-dot.success { background: radial-gradient(circle, #34d399, #059669); }
@@ -137,7 +137,7 @@
     <li>Don't move your head — only your eyes</li>
     <li>Keep your face clearly visible to the webcam</li>
   </ul>
-  <button id="start-btn" onclick="startCalibration()">Start Calibration →</button>
+  <button id="start-btn" onclick="startCalibration(); enterFullscreen();">Start Calibration →</button>
 </div>
 
 <!-- ── Progress bar ─────────────────────────────────────────── -->
@@ -195,7 +195,7 @@ let currentDotIdx = 0;
 let webcamStream  = null;
 let collecting    = false;
 let calibData     = [];   // [{iris_x, iris_y, screen_x, screen_y}, ...]
-const FRAMES_PER_DOT = 15; // capture 15 frames per dot (2 seconds)
+const FRAMES_PER_DOT = 5; // capture 15 frames per dot (2 seconds)
 let frameCount    = 0;
 let frameBuffer   = [];   // iris readings for current dot
 
@@ -203,6 +203,15 @@ const dot        = document.getElementById('calib-dot');
 const statusText = document.getElementById('status-text');
 const progLabel  = document.getElementById('progress-label');
 const progBar    = document.getElementById('progress-bar');
+
+
+function enterFullscreen() {
+  const el = document.documentElement;
+
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else if (el.msRequestFullscreen) el.msRequestFullscreen();
+}
 
 // ── Start calibration ────────────────────────────────────────
 async function startCalibration() {
@@ -245,23 +254,31 @@ function showNextDot() {
   dot.style.top  = sy + 'px';
   dot.className  = 'calib-dot';
 
+  dot.onclick = async function () {
+
+    // Prevent double click
+    dot.onclick = null;
+
+    statusText.textContent = "📸 Capturing... keep looking";
+
+    frameBuffer = [];
+    frameCount  = 0;
+    collecting  = true;
+
+    await collectFrames(sx, sy);
+  };
+
   // Update progress
   progLabel.textContent = `Dot ${currentDotIdx + 1} / 9`;
   progBar.style.width   = ((currentDotIdx / 9) * 100) + '%';
-  statusText.textContent = `👁️ Look at the dot and hold still...`;
+  statusText.textContent = `👁️ Look at the dot and CLICK it`;
 
   // Show dot with animation
   requestAnimationFrame(() => {
     dot.classList.add('active');
   });
 
-  // Wait 500ms then start collecting frames
-  setTimeout(() => {
-    frameBuffer = [];
-    frameCount  = 0;
-    collecting  = true;
-    collectFrames(sx, sy);
-  }, 600);
+  
 }
 
 // ── Collect frames for current dot ───────────────────────────
@@ -274,6 +291,7 @@ async function collectFrames(screenX, screenY) {
       statusText.textContent = "⚠️ Face not detected! Please center your face.";
       statusText.style.color = "#f87171";
       dot.style.background   = "radial-gradient(circle, #f87171, #dc2626)";
+      dot.style.cursor = "pointer";
       await sleep(500);
       continue;  // retry same frame, don't increment counter
     }
@@ -297,7 +315,7 @@ async function collectFrames(screenX, screenY) {
     });
 
     frameCount++;
-    await sleep(130);
+    await sleep(60);
   }
 
   collecting = false;
@@ -319,9 +337,9 @@ async function collectFrames(screenX, screenY) {
   statusText.textContent = '✅ Got it!';
   statusText.style.color = '#34d399';
 
-  await sleep(400);
+  await sleep(150);
   dot.classList.remove('active');
-  await sleep(300);
+  await sleep(100);
 
   currentDotIdx++;
   showNextDot();
